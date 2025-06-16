@@ -1,12 +1,14 @@
 use std::fs;
-use std::io::{BufReader, prelude::*};
+use std::io::{BufReader, Error, prelude::*};
 use std::net::TcpStream;
 
 use crate::http::utils::request_is_http;
 
 mod utils;
 
-pub fn read_http_request(mut stream: TcpStream) {
+type Result<T> = std::result::Result<T, Error>;
+
+pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let http_request: Vec<String> = buf_reader
         .lines()
@@ -15,7 +17,7 @@ pub fn read_http_request(mut stream: TcpStream) {
         .collect();
 
     if request_is_http(http_request.clone()) {
-        // maybe put that writing to a file logic into a separate thread?
+        // todo: maybe put that writing to a file logic into a separate thread?
         std::fs::create_dir("tmp").expect_err("couldn't create dir tmp");
 
         let already_existing_requests =
@@ -30,8 +32,11 @@ pub fn read_http_request(mut stream: TcpStream) {
         )
         .expect("could not write requests to tmp/requests.txt");
 
+        // todo: in shutdown, delete the requests.txt
+
         let response = "HTTP/1.1 200 OK\r\n\r\n";
 
         stream.write_all(response.as_bytes()).unwrap();
     }
+    Ok(())
 }

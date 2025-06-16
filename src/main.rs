@@ -106,9 +106,7 @@ fn handle_connection(
                 //  FIX: this write to stream does not work anymore
                 //      because of the read_request function.
 
-                read_http_request(stream.try_clone().expect("cloning stream failed"));
-
-                if let Err(e) = { stream.write(b"Hello, Fahd!") } {
+                if let Err(e) = read_http_request(stream.try_clone().unwrap()) {
                     println!("Error writing to stream: {}, closing connection", e);
                     break;
                 }
