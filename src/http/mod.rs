@@ -34,7 +34,20 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
 
         // todo: in shutdown, delete the requests.txt
 
-        let response = "HTTP/1.1 200 OK\r\n\r\n";
+        let status_line = "HTTP/1.1 200 OK";
+
+        let contents = fs::read_to_string("assets/index.html")
+            .expect("Error 404 couldn't find the index HTML file");
+        let length = contents.len();
+
+        let response = format!(
+            "{status_line}\r\nContent-Length: {length}\r\nContent-Type: text/html\r\n\r\n{contents}"
+        );
+
+        println!(
+            "Sending response:\n{}",
+            response.lines().take(10).collect::<Vec<_>>().join("\n")
+        );
 
         stream.write_all(response.as_bytes()).unwrap();
     }
