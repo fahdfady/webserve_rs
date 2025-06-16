@@ -4,6 +4,8 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
+use color_print::cprintln;
+
 const PORT: i32 = 3000;
 
 fn main() {
@@ -30,7 +32,7 @@ fn main() {
 
                     let (stream, socket) = listener.accept().unwrap();
 
-                    handle_connection(i, stream, socket);
+                    handle_connection(i, stream, socket, Arc::clone(&shutdown));
                 }
             }
         })
@@ -63,18 +65,31 @@ fn main() {
     println!("Shutdown completed");
 }
 
-fn handle_connection(i: i32, mut stream: TcpStream, socket: SocketAddr) -> JoinHandle<()> {
-    println!("connected to conn-{}", i);
+fn handle_connection(
+    i: i32,
+    mut stream: TcpStream,
+    socket: SocketAddr,
+    shutdown: Arc<Mutex<bool>>,
+) -> JoinHandle<()> {
+    let connection_id = format!("conn-{}", i);
 
+    println!("connected to {}", connection_id);
+
+    // check shutdown with pattern matching
     thread::Builder::new()
-        .name(format!("conn-{}", i))
+        .name(connection_id.clone())
         .spawn(move || {
-            loop {
-                stream
-                    .write(b"Hello, Fahd!")
-                    .expect("could not write to stream");
-                thread::sleep(Duration::from_secs(2));
+            while !*shutdown.lock().unwrap() {
+                if let Err(e) = stream.write(b"Hello, Fahd!") {
+                    println!("Error writing to stream: {}, closing connection", e);
+                    break;
+                }
+                if let Err(e) = stream.flush() {
+                    println!("could not flush, closing connections")
+                }
+                thread::sleep(Duration::from_secs(3));
             }
+            cprintln!("<r>connection <bold>{}</bold> closed</>", connection_id);
         })
         .unwrap()
 }
