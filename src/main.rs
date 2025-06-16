@@ -1,11 +1,14 @@
-use std::io::{BufReader, prelude::*};
+mod http;
+
+use std::io::prelude::*;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
-use std::{fs, vec};
 
 use color_print::cprintln;
+
+use crate::http::read_http_request;
 
 const PORT: i32 = 3000;
 
@@ -117,33 +120,4 @@ fn handle_connection(
             cprintln!("<r>connection <bold>{}</bold> closed</>", connection_id);
         })
         .unwrap()
-}
-
-fn read_http_request(mut stream: TcpStream) {
-    let buf_reader = BufReader::new(&stream);
-    let buf_reader_clone = BufReader::new(&stream);
-    let http_request: Vec<String> = buf_reader
-        .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
-        .collect();
-
-    request_is_http(http_request.clone());
-
-    println!("Request: {:#?}", http_request);
-}
-
-fn request_is_http(mut request: Vec<String>) -> bool {
-    let http_request_start_line_rules = vec![
-        "GET", "POST", "TRACE", "PUT", "HEAD", "CONNECT", "DELETE", "PATCH",
-    ];
-
-    for rule in http_request_start_line_rules {
-        if request[0].contains(&rule.to_owned()) {
-            println!("hahahaha that is an HTTP request congrats !!! ╰(*°▽°*)╯");
-            continue;
-        };
-    }
-
-    true
 }
