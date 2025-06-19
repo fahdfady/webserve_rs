@@ -7,6 +7,21 @@ use crate::http::utils::request_is_http;
 mod utils;
 
 type Result<T> = std::result::Result<T, Error>;
+
+enum HttpStatus {
+    Ok,
+    NotFound,
+}
+
+impl HttpStatus {
+    fn as_str(&self) -> &'static str {
+        match self {
+            HttpStatus::Ok => "HTTP/1.1 200 OK",
+            HttpStatus::NotFound => "HTTP/1.1 404 NOT FOUND",
+        }
+    }
+}
+
 pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let http_request: Vec<String> = buf_reader
@@ -33,14 +48,12 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         )
         .expect("could not write requests to tmp/requests.txt");
 
-        // let mut status_line = "";
-
         let (status_line, file_path) = if request_line == "GET / HTTP/1.1" {
-            ("HTTP/1.1 200 OK", "assets/index.html")
+            (HttpStatus::Ok.as_str(), "assets/index.html")
         } else if request_line == "GET /workout HTTP/1.1" {
-            ("HTTP/1.1 200 OK", "assets/workout.html")
+            (HttpStatus::Ok.as_str(), "assets/workout.html")
         } else {
-            ("HTTP/1.1 404 NOT FOUND", "assets/404.html")
+            (HttpStatus::NotFound.as_str(), "assets/404.html")
         };
 
         // todo: in shutdown, delete the reqسuests.txt
