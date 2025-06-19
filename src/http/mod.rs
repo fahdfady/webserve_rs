@@ -33,27 +33,22 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         )
         .expect("could not write requests to tmp/requests.txt");
 
-        let mut status_line = "";
-        let mut contents: String = String::new();
-        let mut length: usize = 0;
-        let mut response: String = String::new();
+        // let mut status_line = "";
+
+        let (status_line, file_path) = if request_line == "GET / HTTP/1.1" {
+            ("HTTP/1.1 200 OK", "assets/index.html")
+        } else if request_line == "GET /workout HTTP/1.1" {
+            ("HTTP/1.1 200 OK", "assets/workout.html")
+        } else {
+            ("HTTP/1.1 404 NOT FOUND", "assets/404.html")
+        };
 
         // todo: in shutdown, delete the reqسuests.txt
-        if request_line == "GET / HTTP/1.1" {
-            status_line = "HTTP/1.1 200 OK";
+        let contents =
+            fs::read_to_string(file_path).expect("Error 404 couldn't find the index HTML file");
+        let length = contents.len();
 
-            contents = fs::read_to_string("assets/index.html")
-                .expect("Error 404 couldn't find the index HTML file");
-            length = contents.len();
-        } else {
-            status_line = "HTTP/1.1 404 NOT FOUND";
-            contents = fs::read_to_string("assets/404.html")
-                .expect("Error 404 couldn't find the 404 HTML file");
-
-            length = contents.len();
-        }
-
-        response = format!(
+        let response = format!(
             "{status_line}\r\nContent-Length: {length}\r\nContent-Type: text/html\r\n\r\n{contents}"
         );
         println!(
