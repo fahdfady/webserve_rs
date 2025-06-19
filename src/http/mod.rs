@@ -58,54 +58,56 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         .take_while(|line| !line.is_empty())
         .collect();
 
-    let request_line: &str = &http_request[0];
-
-    if request_is_http(http_request.clone()) {
-        // todo: maybe put that writing to a file logic into a separate thread?
-        std::fs::create_dir("tmp").expect_err("couldn't create dir tmp");
-
-        let already_existing_requests =
-            std::fs::read_to_string("tmp/requests.txt").unwrap_or("".to_string());
-
-        std::fs::write(
-            "tmp/requests.txt",
-            format!(
-                "{}\n Request: {:#?}",
-                already_existing_requests, http_request
-            ),
-        )
-        .expect("could not write requests to tmp/requests.txt");
-
-        let response: String = match request_line {
-            "GET / HTTP/1.1" => {
-                let contents =
-                    fs::read_to_string("assets/index.html").expect("Couldn't Load the HTML File");
-                HttpResponse::new(HttpStatus::Ok, contents)
-                    .as_str()
-                    .to_owned()
-            }
-            "GET /workout HTTP/1.1" => {
-                let contents =
-                    fs::read_to_string("assets/workout.html").expect("Couldn't Load the HTML File");
-                HttpResponse::new(HttpStatus::Ok, contents)
-                    .as_str()
-                    .to_owned()
-            }
-            _ => {
-                let contents =
-                    fs::read_to_string("assets/404.html").expect("Couldn't Load the HTML File");
-                HttpResponse::new(HttpStatus::NotFound, contents)
-                    .as_str()
-                    .to_owned()
-            }
-        };
-
-        println!(
-            "Sending response:\n{}",
-            response.lines().take(10).collect::<Vec<_>>().join("\n")
-        );
-
-        stream.write_all(response.as_bytes()).unwrap();
+    if request_is_http(&http_request) {
+        send_http_response(&http_request.clone()[0], http_request, stream);
     }
     Ok(())
+}
+
+fn send_http_response(request_line: &str, http_request: Vec<String>, mut stream: TcpStream) {
+    // todo: maybe put that writing to a file logic into a separate thread?
+    std::fs::create_dir("tmp").expect_err("couldn't create dir tmp");
+
+    let already_existing_requests =
+        std::fs::read_to_string("tmp/requests.txt").unwrap_or("".to_string());
+
+    std::fs::write(
+        "tmp/requests.txt",
+        format!(
+            "{}\n Request: {:#?}",
+            already_existing_requests, http_request
+        ),
+    )
+    .expect("could not write requests to tmp/requests.txt");
+
+    let response: String = match request_line {
+        "GET / HTTP/1.1" => {
+            let contents =
+                fs::read_to_string("assets/index.html").expect("Couldn't Load the HTML File");
+            HttpResponse::new(HttpStatus::Ok, contents)
+                .as_str()
+                .to_owned()
+        }
+        "GET /workout HTTP/1.1" => {
+            let contents =
+                fs::read_to_string("assets/workout.html").expect("Couldn't Load the HTML File");
+            HttpResponse::new(HttpStatus::Ok, contents)
+                .as_str()
+                .to_owned()
+        }
+        _ => {
+            let contents =
+                fs::read_to_string("assets/404.html").expect("Couldn't Load the HTML File");
+            HttpResponse::new(HttpStatus::NotFound, contents)
+                .as_str()
+                .to_owned()
+        }
+    };
+
+    println!(
+        "Sending response:\n{}",
+        response.lines().take(10).collect::<Vec<_>>().join("\n")
+    );
+
+    stream.write_all(response.as_bytes()).unwrap();
 }
