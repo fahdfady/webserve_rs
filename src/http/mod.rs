@@ -22,6 +22,34 @@ impl HttpStatus {
     }
 }
 
+struct HttpResponse {
+    status: HttpStatus,
+    content_length: usize,
+    content_type: String,
+    body: String,
+}
+
+impl HttpResponse {
+    fn new(status: HttpStatus, contents: String) -> Self {
+        Self {
+            status: status,
+            content_length: contents.len(),
+            content_type: String::from("text/html"), // temporary defaulted to `text/html` .. todo: make it to be dynamic in another iterations
+            body: contents,
+        }
+    }
+
+    fn as_str(&self) -> String {
+        format!(
+            "{}\r\nContent-Length: {}\r\nContent-Type: {}\r\n\r\n{}",
+            self.status.as_str(),
+            self.content_length,
+            self.content_type,
+            self.body
+        )
+    }
+}
+
 pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let http_request: Vec<String> = buf_reader
@@ -30,7 +58,7 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         .take_while(|line| !line.is_empty())
         .collect();
 
-    let request_line = &http_request[0];
+    let request_line: &str = &http_request[0];
 
     if request_is_http(http_request.clone()) {
         // todo: maybe put that writing to a file logic into a separate thread?
@@ -48,22 +76,30 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         )
         .expect("could not write requests to tmp/requests.txt");
 
-        let (status_line, file_path) = if request_line == "GET / HTTP/1.1" {
-            (HttpStatus::Ok.as_str(), "assets/index.html")
-        } else if request_line == "GET /workout HTTP/1.1" {
-            (HttpStatus::Ok.as_str(), "assets/workout.html")
-        } else {
-            (HttpStatus::NotFound.as_str(), "assets/404.html")
+        let response: String = match request_line {
+            "GET / HTTP/1.1" => {
+                let contents =
+                    fs::read_to_string("assets/index.html").expect("Couldn't Load the HTML File");
+                HttpResponse::new(HttpStatus::Ok, contents)
+                    .as_str()
+                    .to_owned()
+            }
+            "GET /workout HTTP/1.1" => {
+                let contents =
+                    fs::read_to_string("assets/workout.html").expect("Couldn't Load the HTML File");
+                HttpResponse::new(HttpStatus::Ok, contents)
+                    .as_str()
+                    .to_owned()
+            }
+            _ => {
+                let contents =
+                    fs::read_to_string("assets/404.html").expect("Couldn't Load the HTML File");
+                HttpResponse::new(HttpStatus::NotFound, contents)
+                    .as_str()
+                    .to_owned()
+            }
         };
 
-        // todo: in shutdown, delete the reqسuests.txt
-        let contents =
-            fs::read_to_string(file_path).expect("Error 404 couldn't find the index HTML file");
-        let length = contents.len();
-
-        let response = format!(
-            "{status_line}\r\nContent-Length: {length}\r\nContent-Type: text/html\r\n\r\n{contents}"
-        );
         println!(
             "Sending response:\n{}",
             response.lines().take(10).collect::<Vec<_>>().join("\n")
