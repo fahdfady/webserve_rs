@@ -7,7 +7,6 @@ use crate::http::utils::request_is_http;
 mod utils;
 
 type Result<T> = std::result::Result<T, Error>;
-
 pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let http_request: Vec<String> = buf_reader
@@ -15,6 +14,8 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         .map(|result| result.unwrap())
         .take_while(|line| !line.is_empty())
         .collect();
+
+    let request_line = &http_request[0];
 
     if request_is_http(http_request.clone()) {
         // todo: maybe put that writing to a file logic into a separate thread?
@@ -32,18 +33,29 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         )
         .expect("could not write requests to tmp/requests.txt");
 
-        // todo: in shutdown, delete the requests.txt
+        let mut status_line = "";
+        let mut contents: String = String::new();
+        let mut length: usize = 0;
+        let mut response: String = String::new();
 
-        let status_line = "HTTP/1.1 200 OK";
+        // todo: in shutdown, delete the reqسuests.txt
+        if request_line == "GET / HTTP/1.1" {
+            status_line = "HTTP/1.1 200 OK";
 
-        let contents = fs::read_to_string("assets/index.html")
-            .expect("Error 404 couldn't find the index HTML file");
-        let length = contents.len();
+            contents = fs::read_to_string("assets/index.html")
+                .expect("Error 404 couldn't find the index HTML file");
+            length = contents.len();
+        } else {
+            status_line = "HTTP/1.1 404 NOT FOUND";
+            contents = fs::read_to_string("assets/404.html")
+                .expect("Error 404 couldn't find the 404 HTML file");
 
-        let response = format!(
+            length = contents.len();
+        }
+
+        response = format!(
             "{status_line}\r\nContent-Length: {length}\r\nContent-Type: text/html\r\n\r\n{contents}"
         );
-
         println!(
             "Sending response:\n{}",
             response.lines().take(10).collect::<Vec<_>>().join("\n")
