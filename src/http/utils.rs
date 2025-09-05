@@ -1,12 +1,14 @@
+use color_print::cprintln;
+
 /// helper function to check if a request is HTTP or not
-pub fn request_is_http(mut request: &Vec<String>) -> bool {
+pub fn request_is_http(request: &Vec<String>) -> bool {
     let http_request_start_line_rules = vec![
         "GET", "POST", "TRACE", "PUT", "HEAD", "CONNECT", "DELETE", "PATCH",
     ];
 
     for rule in http_request_start_line_rules {
         if request[0].contains(rule) {
-            println!("hahahaha that is an HTTP request congrats !!! ╰(*°▽°*)╯");
+            cprintln!("<yellow>hahahaha that is an HTTP request congrats !!! ╰(*°▽°*)╯</yellow>");
             return true;
         }
     }

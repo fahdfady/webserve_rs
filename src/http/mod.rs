@@ -50,7 +50,7 @@ impl HttpResponse {
     }
 }
 
-pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
+pub fn read_http_request(stream: TcpStream) -> crate::http::Result<()> {
     let buf_reader = BufReader::new(&stream);
     let http_request: Vec<String> = buf_reader
         .lines()
@@ -59,6 +59,18 @@ pub fn read_http_request(mut stream: TcpStream) -> crate::http::Result<()> {
         .collect();
 
     if request_is_http(&http_request) {
+        // match http_request[0] {
+        //     "asdasdas" => (),
+        //     _ => (),
+        // }
+        let method = http_request[0].as_str();
+
+        match method {
+            "GET" => println!("GET"),
+            "POST" => println!("POST"),
+            _ => println!("no GET POST"),
+        }
+
         send_http_response(&http_request.clone()[0], http_request, stream);
     }
     Ok(())

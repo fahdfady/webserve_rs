@@ -16,6 +16,8 @@ fn main() {
     let listener = TcpListener::bind(format!("0.0.0.0:{}", PORT)).expect("could not bind listener");
     // let (mut stream, _socket) = listener.accept().unwrap();
 
+    println!("Listening on: http://localhost:{}", PORT);
+
     let shutdown = Arc::new(Mutex::new(false));
 
     // check if the server has connections for the last minute
@@ -26,8 +28,8 @@ fn main() {
     let server_handler = thread::Builder::new()
         .name(format!("server"))
         .spawn({
-            println!("Starting server ..");
-            println!("━━(￣ー￣*|||━━");
+            cprintln!("<green>Starting server ..</green>");
+            cprintln!("<green>━━(￣ー￣*|||━━</green>");
             let shutdown = Arc::clone(&shutdown);
             let connections = Arc::clone(&connections);
             // todo: debug the number of connections here.
@@ -61,6 +63,7 @@ fn main() {
 
             // todo: debug the number of connections here.
             move || {
+                println!("Hey my guy, this server is awaiting for connections!");
                 while !*shutdown.lock().unwrap() {
                     // while *connections.lock().unwrap() > 0 {
                     println!("Hey my guy, this server is awaiting for connections!");
